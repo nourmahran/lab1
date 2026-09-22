@@ -151,6 +151,27 @@ button:focus-visible {
   transform: translateY(-1px);
 }
 
+.todo-filters {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.todo-filters button {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.todo-filters button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 /* List */
 .todo-list {
   list-style: none;

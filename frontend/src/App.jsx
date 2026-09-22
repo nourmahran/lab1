@@ -1,7 +1,7 @@
 // App.jsx
 import { useState, useEffect } from 'react';
-import TodoForm from './TodoForm';
-import TodoList from './TodoList';
+import TodoForm from './todoForm';
+import TodoList from './todoList';
 import { fetchTodos, createTodo, updateTodo, deleteTodo } from './api/todos';
 import './todo.css';
 
@@ -14,31 +14,61 @@ const today = new Date().toLocaleDateString(undefined, {
 export default function App() {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [refresh, setRefresh] = useState(0);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchTodos()
-      .then(data => { setTodos(data); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
-  }, []);
+    let ignore = false;
+    const done = filter === 'all' ? undefined : filter === 'done';
+    fetchTodos(done)
+      .then(data => {
+        if (!ignore) {
+          setTodos(data);
+          setError('');
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!ignore) {
+          console.error(err);
+          setError('Could not load tasks. Check that the server is running.');
+          setLoading(false);
+        }
+      });
+    return () => { ignore = true; };
+  }, [filter, refresh]);
+
+  const refreshTodos = () => {
+    setLoading(true);
+    setRefresh(value => value + 1);
+  };
+
+  const changeFilter = (value) => {
+    if (value === filter) return;
+    setLoading(true);
+    setError('');
+    setFilter(value);
+  };
 
   const handleAdd = async (title) => {
-    const newTodo = await createTodo(title);
-    setTodos([newTodo, ...todos]);
+    await createTodo(title);
+    refreshTodos();
   };
 
   const handleToggle = async (id, done) => {
-    const updated = await updateTodo(id, { done: !done });
-    setTodos(todos.map(t => t._id === id ? updated : t));
+    await updateTodo(id, { done: !done });
+    refreshTodos();
   };
 
   const handleRename = async (id, title) => {
-    const updated = await updateTodo(id, { title });
-    setTodos(todos.map(t => t._id === id ? updated : t));
+    await updateTodo(id, { title });
+    refreshTodos();
   };
 
   const handleRemove = async (id) => {
     await deleteTodo(id);
-    setTodos(todos.filter(t => t._id !== id));
+    refreshTodos();
   };
 
   return (
@@ -50,13 +80,18 @@ export default function App() {
         </header>
 
         <TodoForm onAdd={handleAdd} />
-        <TodoList
+        <div className="todo-filters" role="group" aria-label="Filter tasks">
+          <button type="button" aria-pressed={filter === 'all'} onClick={() => changeFilter('all')}>All</button>
+          <button type="button" aria-pressed={filter === 'active'} onClick={() => changeFilter('active')}>Active</button>
+          <button type="button" aria-pressed={filter === 'done'} onClick={() => changeFilter('done')}>Done</button>
+        </div>
+        {error ? <p role="alert">{error}</p> : <TodoList
           todos={todos}
           loading={loading}
           onToggle={handleToggle}
           onRename={handleRename}
           onRemove={handleRemove}
-        />
+        />}
       </div>
     </div>
   );
